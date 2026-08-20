@@ -27,7 +27,8 @@ export default function DocumentIngestion({ onFileIngested }: DocumentIngestionP
     formData.append('file', file);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/upload', formData, {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await axios.post(`${API_URL}/api/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setSuccessMsg(response.data.message || "File indexed successfully!");
@@ -62,7 +63,7 @@ export default function DocumentIngestion({ onFileIngested }: DocumentIngestionP
       </div>
 
       <motion.div
-        {...getRootProps()}
+        {...(getRootProps() as any)}
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.98 }}
         className={`clay-inset p-12 flex flex-col items-center justify-center cursor-pointer transition-colors ${isDragActive ? 'bg-[#ede8df]' : ''}`}

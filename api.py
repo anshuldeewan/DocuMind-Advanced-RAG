@@ -13,6 +13,7 @@ load_dotenv()
 
 from multimodal_loader import MultiModalDocumentLoader
 from document_processor import DocumentProcessor
+from utils import clear_chroma_db
 from rag_workflow import RAGWorkflow
 
 app = FastAPI(title="DocuMind RAG API", version="1.0.0")
@@ -51,8 +52,17 @@ class QueryResponse(BaseModel):
 def read_root():
     return {"status": "online", "system": "DocuMind Advanced RAG Engine"}
 
+@app.post("/api/reset")
+async def reset_database():
+    try:
+        clear_chroma_db()
+        return {"status": "success", "message": "Knowledge base reset successfully."}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to reset database: {str(e)}")
+
 @app.post("/api/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), overwrite: bool = True):
     temp_path = None
     try:
         suffix = Path(file.filename).suffix
@@ -60,6 +70,9 @@ async def upload_file(file: UploadFile = File(...)):
             contents = await file.read()
             tmp.write(contents)
             temp_path = tmp.name
+
+        if overwrite:
+            clear_chroma_db()
 
         # Process and index file
         chunks_count = processor.process_file_api(temp_path, file.filename)

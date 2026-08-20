@@ -23,15 +23,19 @@ export default function Home() {
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[var(--color-clay-shadow)] to-transparent opacity-50" />
         </div>
         
-        <FeatureCards />
+        <section id="architecture">
+          <FeatureCards />
+        </section>
         
         <div className="w-full max-w-4xl mx-auto px-4 my-8">
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[var(--color-clay-shadow)] to-transparent opacity-50" />
         </div>
         
-        <DocumentIngestion onFileIngested={(name) => setIngestedFilename(name)} />
-        
-        <QACanvas ingestedFilename={ingestedFilename} />
+        <section id="knowledge-base" className="w-full flex flex-col items-center">
+          <DocumentIngestion onFileIngested={(name) => setIngestedFilename(name)} />
+          
+          <QACanvas ingestedFilename={ingestedFilename} />
+        </section>
         
         {/* Footer spacing */}
         <div className="h-32 w-full" />

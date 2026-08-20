@@ -3,27 +3,28 @@ Utility functions for the Advanced RAG application
 """
 import shutil
 import os
-import streamlit as st
-from config import CHROMA_PERSIST_DIR
+
+from config import CHROMA_PERSIST_DIR, CHROMA_COLLECTION_NAME
 
 
 def clear_chroma_db():
     """Clear ChromaDB data directory for fresh start"""
     if os.path.exists(CHROMA_PERSIST_DIR):
-        shutil.rmtree(CHROMA_PERSIST_DIR)
-        print("Cleared existing ChromaDB data for fresh start")
+        try:
+            import chromadb
+            client = chromadb.PersistentClient(path=CHROMA_PERSIST_DIR)
+            try:
+                client.delete_collection(name=CHROMA_COLLECTION_NAME)
+                print(f"Collection {CHROMA_COLLECTION_NAME} deleted via API.")
+            except ValueError:
+                pass # Collection doesn't exist
+        except Exception as e:
+            print(f"Warning: could not delete collection via API: {e}")
+            
+        print("Cleared existing ChromaDB data via API for fresh start")
 
 
-def initialize_session_state():
-    """Initialize Streamlit session state variables"""
-    if 'processed_file' not in st.session_state:
-        st.session_state.processed_file = None
-    if 'retriever' not in st.session_state:
-        st.session_state.retriever = None
-    if 'graph_instance' not in st.session_state:
-        st.session_state.graph_instance = None
-    if 'db_cleared' not in st.session_state:
-        st.session_state.db_cleared = False
+
 
 
 def get_file_key(uploaded_file):
