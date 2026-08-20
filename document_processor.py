@@ -7,10 +7,16 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from config import CHUNK_SIZE, CHUNK_OVERLAP, CHROMA_COLLECTION_NAME, CHROMA_PERSIST_DIR
 from utils import get_file_key
 from ui_components import render_file_analysis
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentProcessor:
@@ -18,9 +24,10 @@ class DocumentProcessor:
     
     def __init__(self, document_loader):
         self.document_loader = document_loader
+        gemini_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         self.embedding_function = GoogleGenerativeAIEmbeddings(
-            model="models/text-embedding-004",
-            google_api_key=os.getenv("GEMINI_API_KEY")
+            model="models/gemini-embedding-001",
+            google_api_key=gemini_key
         )
     
     def process_file(self, user_file):
@@ -119,6 +126,46 @@ class DocumentProcessor:
             status_text.empty()
             raise e
     
+    def process_file_api(self, file_path: str, original_filename: str):
+        """
+        API-compatible processing pipeline that bypasses Streamlit UI components.
+        
+        Args:
+            file_path: Absolute path to the saved temporary file.
+            original_filename: The original name of the uploaded file.
+            
+        Returns:
+            int: Number of chunks created and indexed.
+        """
+        # Step 1: Load document
+        logger.info(f"Loading document for API processing: {original_filename}")
+        documents = self.document_loader.load_document(file_path)
+        
+        for doc in documents:
+            doc.metadata["original_filename"] = original_filename
+            doc.metadata["processed_via"] = "api"
+            
+        if not documents:
+            raise ValueError(f"No text could be extracted from {original_filename}")
+            
+        # Step 2: Split into chunks
+        logger.info("Splitting into chunks...")
+        doc_splits = self._create_document_chunks(documents)
+        
+        # Step 3: Create embeddings and store in ChromaDB
+        logger.info("Creating embeddings...")
+        chroma_db = self._create_vector_database(doc_splits)
+        
+        # Step 4: Validate retriever
+        retriever = chroma_db.as_retriever()
+        try:
+            retriever.invoke("test")
+            logger.info("Retriever test successful")
+        except Exception as test_error:
+            logger.warning(f"Retriever test failed: {test_error}")
+            
+        return len(doc_splits)
+
     def _create_document_chunks(self, documents):
         """Splits documents into smaller chunks"""
         document_texts = [doc.page_content for doc in documents]

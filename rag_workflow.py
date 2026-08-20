@@ -14,6 +14,11 @@ The LangGraph workflow includes:
 This demonstrates practical LangGraph RAG patterns for building robust
 question-answering systems with proper workflow orchestration.
 """
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import streamlit as st
 from langchain_core.documents import Document
 from langchain_community.tools.tavily_search import TavilySearchResults

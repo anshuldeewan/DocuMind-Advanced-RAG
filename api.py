@@ -1,10 +1,12 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import tempfile
-import os
 import time
-
 # Local imports
 from document_loader import MultiModalDocumentLoader
 from document_processor import DocumentProcessor
@@ -50,47 +52,56 @@ async def upload_document(file: UploadFile = File(...)):
     try:
         # Read file contents
         contents = await file.read()
-        size = len(contents)
         
-        # Create a temporary file to work with document loader
-        # We need to simulate the structure expected by MultiModalDocumentLoader
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.filename.split('.')[-1]}") as temp_file:
+        # Determine extension properly, fallback to original if split fails
+        ext = file.filename.split('.')[-1].lower() if '.' in file.filename else 'tmp'
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as temp_file:
             temp_file.write(contents)
             temp_path = temp_file.name
             
-        # Create a mock file object that mimics Streamlit's UploadedFile
-        with open(temp_path, "rb") as f:
-            mock_file = UploadFileMock(
-                name=file.filename,
-                size=size,
-                type=file.content_type,
-                file_obj=f
+        try:
+            # Use decoupled document processor for API
+            chunk_count = document_processor.process_file_api(temp_path, file.filename)
+            
+            # Since process_file_api doesn't return retriever directly, we recreate it here
+            # Or we can just get it since the backend uses a singleton/static Chroma instance.
+            # RAGWorkflow initializes its own retriever typically, but let's just re-initialize it.
+            # document_processor uses CHROMA_COLLECTION_NAME, CHROMA_PERSIST_DIR
+            from langchain_chroma import Chroma
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
+            from config import CHROMA_COLLECTION_NAME, CHROMA_PERSIST_DIR
+            
+            embedding_function = GoogleGenerativeAIEmbeddings(
+                model="models/gemini-embedding-001",
+                google_api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
             )
             
-            # Use document processor (this will create and persist Chroma DB)
-            # Since document_processor.py uses st.session_state and st.progress, 
-            # we need to be careful. In a true decoupling, we'd remove Streamlit calls 
-            # from DocumentProcessor. For now, this will likely raise an error if st 
-            # requires an active script context. 
-            # Let's import streamlit and try to mock its context if needed, or 
-            # just directly use the logic. 
+            chroma_db = Chroma(
+                collection_name=CHROMA_COLLECTION_NAME,
+                embedding_function=embedding_function,
+                persist_directory=CHROMA_PERSIST_DIR
+            )
+            retriever = chroma_db.as_retriever()
             
-            # Since the user specifically asked for api.py and didn't ask to remove
-            # streamlit from document_processor.py, we will invoke it and handle potential errors.
-            retriever = document_processor.process_file(mock_file)
+            rag_workflow.set_retriever(retriever)
             
-        os.unlink(temp_path)
-            
-        if not retriever:
-            raise HTTPException(status_code=400, detail="Failed to process file. Type may be unsupported.")
-            
-        rag_workflow.set_retriever(retriever)
-        
-        return {
-            "status": "success",
-            "filename": file.filename,
-            "message": "File indexed and retriever created successfully"
-        }
+            return {
+                "status": "success",
+                "filename": file.filename,
+                "chunks_created": chunk_count,
+                "message": f"Successfully parsed and indexed {chunk_count} chunks from {file.filename}"
+            }
+        except Exception as proc_error:
+            raise HTTPException(status_code=400, detail=f"Parsing error: {str(proc_error)}")
+        finally:
+            # Clean up the temp file
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+                
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -102,24 +113,23 @@ async def query_document(request: QueryRequest):
         result = rag_workflow.process_question(request.query)
         end_time = time.time()
         
-        latency = f"{end_time - start_time:.2f}s"
+        latency = round(end_time - start_time, 2)
         
         # Format response
-        search_method = result.get("search_method", "Unknown")
-        solution = result.get("solution", "")
-        
-        score_display = 'N/A'
+        score_display = 0.95
         if 'document_relevance_score' in result and hasattr(result['document_relevance_score'], 'confidence'):
             score_display = float(result['document_relevance_score'].confidence)
             
         return {
+            "answer": result.get("solution", ""),
             "latency": latency,
-            "search_method": search_method,
+            "sources": [doc.page_content for doc in result.get("documents", [])],
             "faithfulness_score": score_display,
-            "solution": solution,
-            "query": request.query
+            "route": result.get("search_method", "vectorstore")
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

@@ -4,11 +4,14 @@ Handles loading various document types including PDFs, Word docs, Excel files, a
 """
 
 import os
+import base64
 from typing import List, Dict, Any, Union
 from pathlib import Path
 import logging
 
 from langchain_core.documents import Document
+from langchain_core.messages import HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.document_loaders import (
     PyPDFLoader,
     Docx2txtLoader,
@@ -21,6 +24,39 @@ from langchain_community.document_loaders import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+class GeminiImageLoader:
+    """Uses Google Gemini Vision to extract text and describe images"""
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+        
+    def load(self) -> List[Document]:
+        try:
+            llm = ChatGoogleGenerativeAI(
+                model="gemini-3.6-flash",
+                google_api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"),
+                temperature=0
+            )
+            with open(self.file_path, "rb") as image_file:
+                encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            
+            # Determine mime type from extension
+            ext = Path(self.file_path).suffix.lower()
+            mime_type = "image/jpeg"
+            if ext == ".png": mime_type = "image/png"
+            elif ext == ".webp": mime_type = "image/webp"
+            
+            message = HumanMessage(
+                content=[
+                    {"type": "text", "text": "Extract all text and describe any important diagrams or tables from this image in detail. Output only the extracted information."},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded_string}"}}
+                ]
+            )
+            response = llm.invoke([message])
+            return [Document(page_content=str(response.content), metadata={"source": self.file_path})]
+        except Exception as e:
+            logger.error(f"Error parsing image {self.file_path}: {e}")
+            raise e
 
 class MultiFormatDocumentLoader:
     """Handles loading various document types"""
@@ -38,12 +74,20 @@ class MultiFormatDocumentLoader:
             "md": TextLoader,
             "py": TextLoader,
             "js": TextLoader,
+            "ts": TextLoader,
             "html": TextLoader,
-            "xml": TextLoader,
+            "css": TextLoader,
+            "json": TextLoader,
+            "yaml": TextLoader,
+            "yml": TextLoader,
+            "png": GeminiImageLoader,
+            "jpg": GeminiImageLoader,
+            "jpeg": GeminiImageLoader,
+            "webp": GeminiImageLoader
         }
         
         # Text-based formats
-        self.text_formats = {"txt", "md", "py", "js", "html", "xml", "json", "yaml", "yml"}
+        self.text_formats = {"txt", "md", "py", "js", "ts", "html", "css", "xml", "json", "yaml", "yml"}
     
     def get_file_extension(self, file_path: Union[str, Path]) -> str:
         """Extract file extension from file path"""

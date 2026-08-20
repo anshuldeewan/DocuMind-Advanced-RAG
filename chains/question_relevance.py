@@ -39,8 +39,8 @@ class QuestionRelevance(BaseModel):
 
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-flash",
-    google_api_key=os.getenv("GEMINI_API_KEY"),
+    model="gemini-3.6-flash",
+    google_api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"),
     temperature=0
 )
 structured_output = llm.with_structured_output(QuestionRelevance)
