@@ -14,7 +14,9 @@ DocuMind is an advanced Retrieval-Augmented Generation (RAG) web application tha
 - **Multimodal Document Parsing**: Upload PDFs, Word documents, Excel sheets, code files, and even Images.
 - **Smart RAG Workflow**: Utilizes LangGraph to intelligently route queries, handle context retrieval, and gracefully fallback when needed.
 - **Interactive UI Canvas**: Features a stunning, responsive, and glassmorphic UI built with Tailwind CSS, Framer Motion, and React Markdown.
-- **Automatic Index Management**: Safely clears vector contamination across document sessions.
+- **Immersive Full-Screen Mode**: Expand the chat interface to fill the entire viewport for distraction-free reading.
+- **Inline Drag & Drop Ingestion**: Upload and index files seamlessly directly from within the active chat flow.
+- **Automatic Index Management**: Safely clears vector contamination across document sessions, including an auto-reset on page refresh.
 - **Dockerized Backend**: Fully isolated ChromaDB and FastAPI instance for production-ready deployment.
 
 ---
@@ -26,8 +28,8 @@ Easily drag and drop a wide variety of documents directly into the intelligent k
 > **📷 TODO:** Take a screenshot of the working upload drag-and-drop zone and save it as `screenshots/upload.png`
 
 ### Intelligent QA Canvas
-Engage in rich conversations with context-aware responses powered by Gemini 3.1 Flash Lite.
-> **📷 TODO:** Take a screenshot of the beautiful chat interface and save it as `screenshots/qa.png`
+Engage in rich conversations with context-aware responses powered by Gemini 3.1 Flash Lite. Full-screen mode and inline attachments are supported!
+![Intelligent QA Canvas](screenshots/fullscreen.png)
 
 ### Performance & Traceability
 Watch real-time latency metrics and routing evaluations directly in the conversation.

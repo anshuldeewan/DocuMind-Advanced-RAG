@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import ParticleCanvas from '@/components/ParticleCanvas';
 import Hero from '@/components/Hero';
 import FeatureCards from '@/components/FeatureCards';
@@ -9,6 +10,21 @@ import QACanvas from '@/components/QACanvas';
 
 export default function Home() {
   const [ingestedFilename, setIngestedFilename] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    // Automatically reset the backend index on page load/refresh
+    const resetIndexOnLoad = async () => {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        await axios.post(`${API_URL}/api/reset`);
+        console.log("Database index automatically reset on page refresh.");
+      } catch (error) {
+        console.error("Failed to reset index on page load:", error);
+      }
+    };
+    
+    resetIndexOnLoad();
+  }, []);
 
   return (
     <main className="relative min-h-screen w-full overflow-hidden flex flex-col">
@@ -34,7 +50,7 @@ export default function Home() {
         <section id="knowledge-base" className="w-full flex flex-col items-center">
           <DocumentIngestion onFileIngested={(name) => setIngestedFilename(name)} />
           
-          <QACanvas ingestedFilename={ingestedFilename} />
+          <QACanvas ingestedFilename={ingestedFilename} onFileIngested={(name) => setIngestedFilename(name)} />
         </section>
         
         {/* Footer spacing */}

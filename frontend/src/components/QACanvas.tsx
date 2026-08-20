@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
 import {
   Send,
@@ -17,7 +17,12 @@ import {
   RefreshCw,
   Copy,
   Check,
+  Maximize2,
+  Minimize2,
+  Paperclip,
+  Loader2,
 } from "lucide-react";
+import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -36,6 +41,7 @@ interface ChatMessage {
 
 interface QACanvasProps {
   ingestedFilename?: string;
+  onFileIngested?: (filename: string) => void;
 }
 
 function generateId(): string {
@@ -91,7 +97,7 @@ const CodeBlock = ({ inline, className, children, ...props }: any) => {
   );
 };
 
-export default function QACanvas({ ingestedFilename }: QACanvasProps) {
+export default function QACanvas({ ingestedFilename, onFileIngested }: QACanvasProps) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -99,9 +105,32 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
   const [expandedSources, setExpandedSources] = useState<Set<string>>(
     new Set()
   );
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [inlineUploading, setInlineUploading] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullScreen) {
+        setIsFullScreen(false);
+      }
+    };
+    
+    if (isFullScreen) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullScreen]);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -261,8 +290,71 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
     }
   };
 
+  const processInlineFile = async (file: File) => {
+    setInlineUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      await axios.post(`${API_URL}/api/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      
+      if (onFileIngested) {
+        onFileIngested(file.name);
+      }
+      
+      const systemMessage: ChatMessage = {
+        id: generateId(),
+        role: "assistant",
+        content: `📎 *Attached & indexed: ${file.name}*`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, systemMessage]);
+    } catch (err: any) {
+      console.error("Inline Upload Error:", err);
+      setError(
+        err.response?.data?.detail || "An error occurred while uploading the file."
+      );
+    } finally {
+      setInlineUploading(false);
+    }
+  };
+
+  const handleInlineUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processInlineFile(e.target.files[0]);
+    }
+  };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      processInlineFile(acceptedFiles[0]);
+    }
+  }, [onFileIngested]);
+
+  const { getRootProps, isDragActive } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt', '.csv', '.py', '.js', '.ts', '.html', '.css', '.md'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/*': ['.png', '.jpg', '.jpeg', '.webp']
+    }
+  });
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col">
+    <div {...getRootProps()} className={isFullScreen ? "fixed inset-0 z-[60] w-screen h-[100dvh] m-0 p-4 sm:p-6 bg-[#fbf9f5] flex flex-col" : "w-full max-w-4xl mx-auto px-4 py-8 flex flex-col relative"}>
+      {isDragActive && (
+        <div className="absolute inset-0 z-50 bg-[#faf8f5]/90 backdrop-blur-sm border-2 border-dashed border-orange-400 rounded-2xl flex flex-col items-center justify-center">
+          <Paperclip className="w-16 h-16 text-orange-500 mb-4 animate-bounce" />
+          <p className="text-2xl font-bold text-slate-700">Drop file to attach & index</p>
+        </div>
+      )}
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">
@@ -300,6 +392,19 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
               <RefreshCw className="w-3.5 h-3.5" />
               Reset Index
             </button>
+            <button
+              type="button"
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="clay-badge flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-blue-500 hover:text-blue-700 transition-colors"
+              title={isFullScreen ? "Exit Full Screen" : "Expand"}
+            >
+              {isFullScreen ? (
+                <Minimize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize2 className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">{isFullScreen ? "Exit Full Screen" : "Expand"}</span>
+            </button>
           </div>
         )}
       </div>
@@ -307,7 +412,7 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
       {/* Chat Feed */}
       <div
         ref={chatContainerRef}
-        className="flex-1 min-h-[320px] max-h-[560px] overflow-y-auto space-y-4 mb-4 pr-1 scrollbar-thin"
+        className={`flex-1 overflow-y-auto space-y-4 mb-4 pr-1 scrollbar-thin w-full max-w-5xl mx-auto ${isFullScreen ? "min-h-0" : "min-h-[320px] max-h-[560px]"}`}
       >
         {/* Empty state */}
         {messages.length === 0 && !loading && (
@@ -513,7 +618,7 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
       )}
 
       {/* Pinned Document Badge + Input Bar */}
-      <div className="sticky bottom-0 pt-2">
+      <div className="sticky bottom-0 pt-2 w-full max-w-5xl mx-auto pb-4">
         {ingestedFilename && (
           <div className="flex items-center justify-center mb-2">
             <div className="clay-badge flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-slate-600">
@@ -527,13 +632,35 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
         )}
 
         <form onSubmit={handleQuery} className="relative">
+          {inlineUploading && (
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white px-4 py-1.5 rounded-full shadow-sm border border-slate-200 text-xs font-semibold text-slate-600">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-500" />
+              Uploading & indexing...
+            </div>
+          )}
           <div className="clay-card rounded-3xl p-2 flex items-center bg-[#faf8f5]">
+            <input 
+              type="file" 
+              ref={chatFileInputRef} 
+              onChange={handleInlineUpload} 
+              accept=".pdf,.docx,.txt,.csv,.xlsx,.png,.jpg" 
+              className="hidden" 
+            />
+            <button
+              type="button"
+              onClick={() => chatFileInputRef.current?.click()}
+              disabled={inlineUploading || loading}
+              className="p-3 ml-1 rounded-xl text-slate-400 hover:text-orange-500 hover:bg-orange-50 disabled:opacity-50 transition-colors"
+              title="Attach a file"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Ask about the ingested documents..."
-              className="w-full bg-transparent px-6 py-4 text-slate-800 placeholder-slate-400 focus:outline-none text-base"
+              className="w-full bg-transparent px-4 py-4 text-slate-800 placeholder-slate-400 focus:outline-none text-base"
             />
             <button
               type="submit"
