@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_chroma import Chroma
+from langchain_community.retrievers import BM25Retriever
+from langchain_classic.retrievers import EnsembleRetriever
 
 load_dotenv()
 
@@ -42,10 +44,32 @@ class RAGWorkflow:
         docs: List[Document] = []
         route_taken = "ChromaDB Retriever"
 
-        # 1. Document Retrieval
+        # 1. Document Retrieval (Hybrid MMR + BM25)
         if vectorstore:
             try:
-                docs = vectorstore.similarity_search(question, k=10)
+                vector_retriever = vectorstore.as_retriever(
+                    search_type="mmr",
+                    search_kwargs={"k": 4, "fetch_k": 12, "lambda_mult": 0.7}
+                )
+                
+                # Fetch all documents from Chroma to build BM25 index
+                db_data = vectorstore.get(include=['documents', 'metadatas'])
+                
+                if db_data and db_data.get('documents'):
+                    bm25_retriever = BM25Retriever.from_texts(
+                        texts=db_data['documents'],
+                        metadatas=db_data.get('metadatas')
+                    )
+                    bm25_retriever.k = 4
+                    
+                    ensemble_retriever = EnsembleRetriever(
+                        retrievers=[bm25_retriever, vector_retriever],
+                        weights=[0.5, 0.5]
+                    )
+                    docs = ensemble_retriever.invoke(question)
+                    route_taken = "Hybrid Retriever (ChromaDB + BM25)"
+                else:
+                    docs = vector_retriever.invoke(question)
             except Exception as e:
                 print(f"[RAG] Retrieval error: {e}")
 

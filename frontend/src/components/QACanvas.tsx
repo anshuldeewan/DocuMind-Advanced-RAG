@@ -12,6 +12,8 @@ import {
   FileText,
   User,
   Bot,
+  Download,
+  Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -42,6 +44,8 @@ function formatTime(iso: string): string {
   });
 }
 
+const STORAGE_KEY = "documind_chat_history";
+
 export default function QACanvas({ ingestedFilename }: QACanvasProps) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,10 +58,85 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        setMessages(JSON.parse(saved));
+      }
+    } catch {
+      // localStorage might be unavailable
+    }
+  }, []);
+
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Persist messages to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch {
+      // localStorage might be full or unavailable
+    }
+  }, [messages]);
+
+  const clearChat = () => {
+    setMessages([]);
+    setExpandedSources(new Set());
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const exportChat = () => {
+    if (messages.length === 0) return;
+
+    const lines: string[] = [
+      "# DocuMind — Chat Export",
+      `**Exported:** ${new Date().toLocaleString()}`,
+      ingestedFilename ? `**Document:** ${ingestedFilename}` : "",
+      "",
+      "---",
+      "",
+    ];
+
+    for (const msg of messages) {
+      const time = formatTime(msg.timestamp);
+      if (msg.role === "user") {
+        lines.push(`### 🧑 You  _(${time})_`);
+        lines.push("", msg.content, "");
+      } else {
+        lines.push(`### 🤖 DocuMind  _(${time})_`);
+        if (msg.latency !== undefined || msg.route || msg.faithfulness_score !== undefined) {
+          const badges: string[] = [];
+          if (msg.latency !== undefined) badges.push(`Latency: ${msg.latency}s`);
+          if (msg.route) badges.push(`Route: ${msg.route}`);
+          if (msg.faithfulness_score !== undefined) badges.push(`Faithfulness: ${Math.round(msg.faithfulness_score * 100)}%`);
+          lines.push(`> ${badges.join(" · ")}`);
+          lines.push("");
+        }
+        lines.push(msg.content, "");
+        if (msg.sources && msg.sources.length > 0) {
+          lines.push("<details>", `<summary>📎 ${msg.sources.length} Retrieved Source Chunks</summary>`, "");
+          msg.sources.forEach((src, i) => {
+            lines.push(`**Chunk ${i + 1}:**`, "```", src, "```", "");
+          });
+          lines.push("</details>", "");
+        }
+      }
+      lines.push("---", "");
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `documind-chat-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const toggleSources = (messageId: string) => {
     setExpandedSources((prev) => {
@@ -133,6 +212,28 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
           Ask anything. Watch the LangGraph engine evaluate and route your
           request.
         </p>
+
+        {/* Action Buttons */}
+        {messages.length > 0 && (
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <button
+              type="button"
+              onClick={exportChat}
+              className="clay-badge flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export Chat
+            </button>
+            <button
+              type="button"
+              onClick={clearChat}
+              className="clay-badge flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-red-500 hover:text-red-700 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear Chat
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Chat Feed */}
@@ -256,13 +357,18 @@ export default function QACanvas({ ingestedFilename }: QACanvasProps) {
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden"
                             >
-                              <div className="mt-2 space-y-1.5">
+                              <div className="mt-2 max-h-52 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
                                 {msg.sources.map((src, idx) => (
                                   <div
                                     key={idx}
-                                    className="p-2.5 bg-slate-100/70 rounded-xl text-[11px] text-slate-700 font-mono leading-relaxed"
+                                    className="relative p-3 bg-slate-50 border border-slate-200/80 rounded-xl max-h-32 overflow-y-auto scrollbar-thin"
                                   >
-                                    {src}
+                                    <span className="inline-block mb-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                                      Chunk {idx + 1}
+                                    </span>
+                                    <p className="text-[11px] text-slate-600 font-mono leading-relaxed whitespace-pre-wrap">
+                                      {src}
+                                    </p>
                                   </div>
                                 ))}
                               </div>
