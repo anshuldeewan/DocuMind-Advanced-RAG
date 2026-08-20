@@ -5,6 +5,7 @@ import axios from 'axios';
 import ParticleCanvas from '@/components/ParticleCanvas';
 import Hero from '@/components/Hero';
 import FeatureCards from '@/components/FeatureCards';
+import ArchitectureDiagram from '@/components/ArchitectureDiagram';
 import DocumentIngestion from '@/components/DocumentIngestion';
 import QACanvas from '@/components/QACanvas';
 
@@ -39,18 +40,19 @@ export default function Home() {
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[var(--color-clay-shadow)] to-transparent opacity-50" />
         </div>
         
-        <section id="architecture">
-          <FeatureCards />
+        <section id="knowledge-base" className="w-full flex flex-col items-center">
+          <DocumentIngestion onFileIngested={(name) => setIngestedFilename(name)} />
+          
+          <QACanvas ingestedFilename={ingestedFilename} onFileIngested={(name) => setIngestedFilename(name)} />
         </section>
         
         <div className="w-full max-w-4xl mx-auto px-4 my-8">
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[var(--color-clay-shadow)] to-transparent opacity-50" />
         </div>
         
-        <section id="knowledge-base" className="w-full flex flex-col items-center">
-          <DocumentIngestion onFileIngested={(name) => setIngestedFilename(name)} />
-          
-          <QACanvas ingestedFilename={ingestedFilename} onFileIngested={(name) => setIngestedFilename(name)} />
+        <section id="architecture" className="w-full flex flex-col items-center pt-16 -mt-16">
+          <ArchitectureDiagram />
+          <FeatureCards />
         </section>
         
         {/* Footer spacing */}
