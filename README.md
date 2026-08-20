@@ -21,19 +21,19 @@ DocuMind is an advanced Retrieval-Augmented Generation (RAG) web application tha
 
 ---
 
-## 📸 Proof of Work
+## 📸 Showcase
 
-### Document Upload & Ingestion
-Easily drag and drop a wide variety of documents directly into the intelligent knowledge base.
-> **📷 TODO:** Take a screenshot of the working upload drag-and-drop zone and save it as `screenshots/upload.png`
+| Landing Page | Knowledge Ingestion |
+| :---: | :---: |
+| ![Landing](screenshots/Landing_page.png) | ![Ingestion](screenshots/Knowledge_Ingestion.png) |
 
-### Intelligent QA Canvas
-Engage in rich conversations with context-aware responses powered by Gemini 3.1 Flash Lite. Full-screen mode and inline attachments are supported!
-![Intelligent QA Canvas](screenshots/fullscreen.png)
+| Interactive QA Canvas | Full-Screen Chat Mode |
+| :---: | :---: |
+| ![QA Canvas](screenshots/Chat_and_Footer.png) | ![Full Screen](screenshots/fullscreen.png) |
 
-### Performance & Traceability
-Watch real-time latency metrics and routing evaluations directly in the conversation.
-> **📷 TODO:** Take a screenshot of the evaluation metrics pills and save it as `screenshots/eval.png`
+| Telemetry & Tracing | Source Retrieval |
+| :---: | :---: |
+| ![Eval Metrics](screenshots/eval1.png) | ![Source Chunks](screenshots/eval2.png) |
 
 ---
 
