@@ -1,5 +1,7 @@
-import React from 'react';
-import { BrainCircuit, GitBranch, Activity, Database, LayoutTemplate } from 'lucide-react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { BrainCircuit, GitBranch, Activity, Database, LayoutTemplate, MessageSquare, ChevronLeft } from 'lucide-react';
 
 const LinkedinIcon = ({ className }: { className?: string }) => (
   <svg 
@@ -19,8 +21,21 @@ const LinkedinIcon = ({ className }: { className?: string }) => (
 );
 
 export default function Navbar() {
+  const [chatOpen, setChatOpen] = useState(false);
+
+  useEffect(() => {
+    const handleToggle = () => setChatOpen(prev => !prev);
+    const handleClose = () => setChatOpen(false);
+    window.addEventListener('toggle-fullscreen-chat', handleToggle);
+    window.addEventListener('close-fullscreen-chat', handleClose);
+    return () => {
+      window.removeEventListener('toggle-fullscreen-chat', handleToggle);
+      window.removeEventListener('close-fullscreen-chat', handleClose);
+    };
+  }, []);
+
   return (
-    <nav className="sticky top-0 z-50 w-full backdrop-blur-md bg-[#faf8f5]/80 border-b border-slate-200/50 shadow-sm transition-all">
+    <nav className="sticky top-0 z-[70] w-full backdrop-blur-md bg-[#faf8f5]/80 border-b border-slate-200/50 shadow-sm transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           
@@ -44,6 +59,13 @@ export default function Navbar() {
           {/* Right Navigation */}
           <div className="flex items-center gap-6">
             <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500">
+              <button 
+                onClick={() => window.dispatchEvent(new Event('toggle-fullscreen-chat'))}
+                className={`transition-colors flex items-center gap-1.5 ${chatOpen ? "text-orange-500 hover:text-orange-600 font-bold" : "hover:text-slate-800"}`}
+              >
+                {chatOpen ? <ChevronLeft className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+                {chatOpen ? "Go Back" : "Chatbox"}
+              </button>
               <a href="#knowledge-base" className="hover:text-slate-800 transition-colors flex items-center gap-1.5">
                 <Database className="w-4 h-4" />
                 Knowledge Base

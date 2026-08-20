@@ -132,6 +132,20 @@ export default function QACanvas({ ingestedFilename, onFileIngested }: QACanvasP
     };
   }, [isFullScreen]);
 
+  // Listen for header click to toggle full-screen chat
+  useEffect(() => {
+    const handleToggleFullscreen = () => setIsFullScreen(prev => !prev);
+    window.addEventListener('toggle-fullscreen-chat', handleToggleFullscreen);
+    return () => window.removeEventListener('toggle-fullscreen-chat', handleToggleFullscreen);
+  }, []);
+
+  // Sync back to Navbar when closed via Escape or other buttons
+  useEffect(() => {
+    if (!isFullScreen) {
+      window.dispatchEvent(new Event('close-fullscreen-chat'));
+    }
+  }, [isFullScreen]);
+
   // Load from localStorage on mount
   useEffect(() => {
     try {
@@ -348,7 +362,7 @@ export default function QACanvas({ ingestedFilename, onFileIngested }: QACanvasP
   });
 
   return (
-    <div {...getRootProps()} className={isFullScreen ? "fixed inset-0 z-[60] w-screen h-[100dvh] m-0 p-4 sm:p-6 bg-[#fbf9f5] flex flex-col" : "w-full max-w-4xl mx-auto px-4 py-8 flex flex-col relative"}>
+    <div {...getRootProps()} className={isFullScreen ? "fixed inset-0 z-[60] w-screen h-[100dvh] m-0 p-4 sm:p-6 pt-20 sm:pt-24 bg-[#fbf9f5] flex flex-col" : "w-full max-w-4xl mx-auto px-4 py-8 flex flex-col relative"}>
       {isDragActive && (
         <div className="absolute inset-0 z-50 bg-[#faf8f5]/90 backdrop-blur-sm border-2 border-dashed border-orange-400 rounded-2xl flex flex-col items-center justify-center">
           <Paperclip className="w-16 h-16 text-orange-500 mb-4 animate-bounce" />
