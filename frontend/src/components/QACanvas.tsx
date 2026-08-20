@@ -1,151 +1,355 @@
 "use client";
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Activity, Clock, ShieldCheck, Route as RouteIcon, Search, FileText } from 'lucide-react';
-import axios from 'axios';
+import React, { useState, useRef, useEffect } from "react";
+import axios from "axios";
+import {
+  Send,
+  Clock,
+  Compass,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  User,
+  Bot,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 
-interface Telemetry {
-  latency: string;
-  search_method: string;
-  faithfulness_score: number | string;
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  latency?: number;
+  sources?: string[];
+  faithfulness_score?: number;
+  route?: string;
+  timestamp: string;
 }
 
-export default function QACanvas() {
+interface QACanvasProps {
+  ingestedFilename?: string;
+}
+
+function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+}
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export default function QACanvas({ ingestedFilename }: QACanvasProps) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(
+    new Set()
+  );
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const toggleSources = (messageId: string) => {
+    setExpandedSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  };
+
+  const handleQuery = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || loading) return;
 
+    const userMessage: ChatMessage = {
+      id: generateId(),
+      role: "user",
+      content: query.trim(),
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setQuery("");
     setLoading(true);
-    setResult(null);
+    setError(null);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/query', { query });
-      setResult({
-        answer: response.data.answer || response.data.generation || response.data.solution || "",
-        latency: response.data.latency || 0,
-        sources: response.data.sources || [],
-        faithfulness_score: response.data.faithfulness_score || 0.95,
-        route: response.data.route || response.data.search_method || "vectorstore"
+      // Build history from existing messages for conversational context
+      const history = [...messages, userMessage].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const response = await axios.post("http://localhost:8000/api/query", {
+        query: userMessage.content,
+        history,
       });
-    } catch (error) {
-      console.error(error);
-      setResult({
-        answer: "Sorry, an error occurred while processing your query.",
-        latency: 0,
-        sources: [],
-        faithfulness_score: 0,
-        route: "error"
-      });
+
+      const assistantMessage: ChatMessage = {
+        id: generateId(),
+        role: "assistant",
+        content: response.data.answer,
+        latency: response.data.latency,
+        sources: response.data.sources,
+        faithfulness_score: response.data.faithfulness_score,
+        route: response.data.route,
+        timestamp: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err: any) {
+      console.error("Query Error:", err);
+      setError(
+        err.response?.data?.detail ||
+          "An error occurred while processing your query."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <section className="relative z-10 py-16 px-4 max-w-5xl mx-auto">
-      <div className="text-center mb-10">
-        <h2 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">Interactive Query Canvas</h2>
-        <p className="text-[var(--color-text-muted)]">Ask anything. Watch the LangGraph engine evaluate and route your request.</p>
+    <div className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight">
+          Interactive Query Canvas
+        </h2>
+        <p className="text-slate-500 mt-2 text-sm">
+          Ask anything. Watch the LangGraph engine evaluate and route your
+          request.
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="relative mb-12 flex items-center justify-center">
-        <div className="relative w-full max-w-3xl flex items-center">
-          <div className="absolute left-6 text-[var(--color-text-muted)]">
-            <Search size={24} />
+      {/* Chat Feed */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 min-h-[320px] max-h-[560px] overflow-y-auto space-y-4 mb-4 pr-1 scrollbar-thin"
+      >
+        {/* Empty state */}
+        {messages.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center h-full py-16 text-center">
+            <div className="clay-card p-6 rounded-2xl mb-4">
+              <Bot className="w-10 h-10 text-slate-400 mx-auto" />
+            </div>
+            <p className="text-slate-500 text-sm max-w-md">
+              {ingestedFilename
+                ? `Your document is ready. Ask a question about "${ingestedFilename}".`
+                : "Upload a document above, then ask questions about it here."}
+            </p>
           </div>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask about the ingested documents..."
-            className="w-full py-5 pl-16 pr-20 text-lg font-medium text-[var(--color-text-primary)] clay-inset outline-none focus:ring-2 focus:ring-[var(--color-accent-amber)]/50 placeholder:text-[var(--color-text-muted)]/70 transition-all"
-            disabled={loading}
-          />
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            type="submit"
-            disabled={loading || !query.trim()}
-            className="absolute right-4 p-3 clay-button text-[var(--color-accent-coral)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {loading ? <Activity size={24} className="animate-pulse" /> : <Send size={24} />}
-          </motion.button>
-        </div>
-      </form>
+        )}
 
-      <AnimatePresence mode="wait">
+        {/* Messages */}
+        <AnimatePresence initial={false}>
+          {messages.map((msg) => (
+            <motion.div
+              key={msg.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+              className={`flex ${
+                msg.role === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              {msg.role === "user" ? (
+                /* ── User Bubble ── */
+                <div className="flex items-end gap-2 max-w-[75%]">
+                  <div className="clay-card rounded-2xl rounded-br-md px-5 py-3 bg-gradient-to-br from-orange-50 to-amber-50">
+                    <p className="text-slate-800 text-sm leading-relaxed">
+                      {msg.content}
+                    </p>
+                    <span className="block text-[10px] text-slate-400 mt-1.5 text-right">
+                      {formatTime(msg.timestamp)}
+                    </span>
+                  </div>
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-sm">
+                    <User className="w-3.5 h-3.5 text-white" />
+                  </div>
+                </div>
+              ) : (
+                /* ── Assistant Card ── */
+                <div className="flex items-start gap-2 max-w-[90%] w-full">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center shadow-sm mt-1">
+                    <Bot className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div className="clay-card rounded-2xl rounded-bl-md p-5 bg-[#faf8f5] flex-1 space-y-4">
+                    {/* Telemetry Row */}
+                    <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-slate-200/60 text-[11px] font-medium text-slate-600">
+                      {msg.latency !== undefined && (
+                        <div className="flex items-center gap-1 bg-amber-100/60 px-2.5 py-1 rounded-lg">
+                          <Clock className="w-3.5 h-3.5 text-amber-600" />
+                          <span>
+                            <strong className="text-slate-800">
+                              {msg.latency}s
+                            </strong>
+                          </span>
+                        </div>
+                      )}
+                      {msg.route && (
+                        <div className="flex items-center gap-1 bg-blue-100/60 px-2.5 py-1 rounded-lg">
+                          <Compass className="w-3.5 h-3.5 text-blue-600" />
+                          <span>
+                            <strong className="text-slate-800">
+                              {msg.route}
+                            </strong>
+                          </span>
+                        </div>
+                      )}
+                      {msg.faithfulness_score !== undefined && (
+                        <div className="flex items-center gap-1 bg-emerald-100/60 px-2.5 py-1 rounded-lg">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>
+                            <strong className="text-slate-800">
+                              {Math.round(msg.faithfulness_score * 100)}%
+                            </strong>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Markdown Answer */}
+                    <div className="prose prose-slate prose-sm max-w-none text-slate-800 leading-relaxed">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+
+                    {/* Sources Accordion */}
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => toggleSources(msg.id)}
+                          className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+                        >
+                          <span>
+                            {expandedSources.has(msg.id) ? "Hide" : "View"}{" "}
+                            {msg.sources.length} Retrieved Source Chunks
+                          </span>
+                          {expandedSources.has(msg.id) ? (
+                            <ChevronUp className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+
+                        <AnimatePresence>
+                          {expandedSources.has(msg.id) && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-2 space-y-1.5">
+                                {msg.sources.map((src, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="p-2.5 bg-slate-100/70 rounded-xl text-[11px] text-slate-700 font-mono leading-relaxed"
+                                  >
+                                    {src}
+                                  </div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+
+                    {/* Timestamp */}
+                    <span className="block text-[10px] text-slate-400">
+                      {formatTime(msg.timestamp)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {/* Typing Indicator */}
         {loading && (
           <motion.div
-            key="skeleton"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="clay-card p-8 mb-8 relative overflow-hidden flex flex-col gap-4"
+            className="flex items-start gap-2"
           >
-             <div className="h-6 w-1/3 bg-[var(--color-clay-shadow)]/20 animate-pulse rounded-md"></div>
-             <div className="h-4 w-full bg-[var(--color-clay-shadow)]/10 animate-pulse rounded-md"></div>
-             <div className="h-4 w-5/6 bg-[var(--color-clay-shadow)]/10 animate-pulse rounded-md"></div>
-             <div className="h-4 w-4/6 bg-[var(--color-clay-shadow)]/10 animate-pulse rounded-md"></div>
-          </motion.div>
-        )}
-        
-        {result && !loading && (
-          <motion.div
-            key="result"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="clay-card p-8 relative overflow-hidden"
-          >
-            {/* Live Telemetry Row */}
-            <div className="flex flex-wrap items-center gap-4 mb-6 pb-6 border-b border-[var(--color-clay-shadow)]/30">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-secondary)]">
-                <Clock size={16} className="text-[var(--color-accent-amber)]" />
-                <span>Latency: {result.latency}{typeof result.latency === 'number' ? 's' : ''}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-secondary)]">
-                <RouteIcon size={16} className="text-[var(--color-accent-sage)]" />
-                <span>Route: {result.route === 'online' ? 'Tavily Search' : 'ChromaDB Retriever'}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-secondary)]">
-                <ShieldCheck size={16} className="text-[var(--color-accent-coral)]" />
-                <span>Faithfulness: {result.faithfulness_score !== 'N/A' ? `${(Number(result.faithfulness_score) * 100).toFixed(0)}%` : 'N/A'}</span>
+            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center shadow-sm">
+              <Bot className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div className="clay-card rounded-2xl rounded-bl-md px-5 py-4 bg-[#faf8f5]">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce [animation-delay:300ms]" />
               </div>
             </div>
-
-            <div className="prose prose-lg max-w-none text-[var(--color-text-primary)]">
-              <div className="whitespace-pre-wrap leading-relaxed">
-                {result.answer}
-              </div>
-            </div>
-
-            {/* Source Chunks Viewer */}
-            {result.sources && result.sources.length > 0 && (
-              <div className="mt-8 pt-6 border-t border-[var(--color-clay-shadow)]/30">
-                <details className="group">
-                  <summary className="flex items-center gap-2 font-semibold text-[var(--color-text-secondary)] cursor-pointer list-none select-none">
-                    <FileText size={18} />
-                    <span>View Sourced Chunks ({result.sources.length})</span>
-                    <span className="ml-auto transition group-open:rotate-180">▼</span>
-                  </summary>
-                  <div className="mt-4 flex flex-col gap-3">
-                    {result.sources.map((source: string, idx: number) => (
-                      <div key={idx} className="p-4 clay-inset text-sm text-[var(--color-text-muted)] line-clamp-4 leading-relaxed">
-                        {source}
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              </div>
-            )}
           </motion.div>
         )}
-      </AnimatePresence>
-    </section>
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="clay-card rounded-2xl p-3 bg-red-50 text-red-600 text-sm text-center mb-3">
+          {error}
+        </div>
+      )}
+
+      {/* Pinned Document Badge + Input Bar */}
+      <div className="sticky bottom-0 pt-2">
+        {ingestedFilename && (
+          <div className="flex items-center justify-center mb-2">
+            <div className="clay-badge flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-slate-600">
+              <FileText className="w-3.5 h-3.5 text-orange-500" />
+              <span>
+                Ingested Context:{" "}
+                <strong className="text-slate-800">{ingestedFilename}</strong>
+              </span>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleQuery} className="relative">
+          <div className="clay-card rounded-3xl p-2 flex items-center bg-[#faf8f5]">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ask about the ingested documents..."
+              className="w-full bg-transparent px-6 py-4 text-slate-800 placeholder-slate-400 focus:outline-none text-base"
+            />
+            <button
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="p-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg disabled:opacity-50 transition-all hover:scale-105"
+            >
+              {loading ? (
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

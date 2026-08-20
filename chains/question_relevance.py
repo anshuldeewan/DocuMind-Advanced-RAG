@@ -39,7 +39,7 @@ class QuestionRelevance(BaseModel):
 
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-3.6-flash",
+    model="gemini-3.1-flash-lite",
     google_api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY"),
     temperature=0
 )

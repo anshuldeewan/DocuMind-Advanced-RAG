@@ -3,7 +3,7 @@ Document processing module for the Advanced RAG application
 """
 import streamlit as st
 import time
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import os
@@ -167,19 +167,17 @@ class DocumentProcessor:
         return len(doc_splits)
 
     def _create_document_chunks(self, documents):
-        """Splits documents into smaller chunks"""
-        document_texts = [doc.page_content for doc in documents]
-        
-        splitter = CharacterTextSplitter.from_tiktoken_encoder(
-            chunk_size=CHUNK_SIZE, 
-            chunk_overlap=CHUNK_OVERLAP
+        """Splits documents into smaller chunks using recursive character splitting"""
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=100,
+            separators=["\n\n", "\n", ". ", " ", ""],
+            length_function=len,
         )
-        doc_splits = splitter.create_documents(document_texts)
+        doc_splits = splitter.split_documents(documents)
         
-        # Add metadata
+        # Enrich metadata
         for i, split in enumerate(doc_splits):
-            original_doc_index = min(i, len(documents) - 1)
-            split.metadata.update(documents[original_doc_index].metadata)
             split.metadata.update({
                 "chunk_id": i,
                 "total_chunks": len(doc_splits),

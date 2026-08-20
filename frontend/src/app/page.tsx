@@ -1,4 +1,6 @@
-import React from 'react';
+"use client";
+
+import React, { useState } from 'react';
 import ParticleCanvas from '@/components/ParticleCanvas';
 import Hero from '@/components/Hero';
 import FeatureCards from '@/components/FeatureCards';
@@ -6,6 +8,8 @@ import DocumentIngestion from '@/components/DocumentIngestion';
 import QACanvas from '@/components/QACanvas';
 
 export default function Home() {
+  const [ingestedFilename, setIngestedFilename] = useState<string | undefined>(undefined);
+
   return (
     <main className="relative min-h-screen w-full overflow-hidden flex flex-col">
       {/* Background Layer */}
@@ -25,9 +29,9 @@ export default function Home() {
           <div className="h-px w-full bg-gradient-to-r from-transparent via-[var(--color-clay-shadow)] to-transparent opacity-50" />
         </div>
         
-        <DocumentIngestion />
+        <DocumentIngestion onFileIngested={(name) => setIngestedFilename(name)} />
         
-        <QACanvas />
+        <QACanvas ingestedFilename={ingestedFilename} />
         
         {/* Footer spacing */}
         <div className="h-32 w-full" />

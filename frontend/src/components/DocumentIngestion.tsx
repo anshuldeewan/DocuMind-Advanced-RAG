@@ -6,7 +6,11 @@ import { motion } from 'framer-motion';
 import { UploadCloud, CheckCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
-export default function DocumentIngestion() {
+interface DocumentIngestionProps {
+  onFileIngested?: (filename: string) => void;
+}
+
+export default function DocumentIngestion({ onFileIngested }: DocumentIngestionProps) {
   const [uploading, setUploading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -27,6 +31,7 @@ export default function DocumentIngestion() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setSuccessMsg(response.data.message || "File indexed successfully!");
+      onFileIngested?.(file.name);
     } catch (err: any) {
       setErrorMsg(err.response?.data?.detail || "Failed to upload and process file.");
     } finally {

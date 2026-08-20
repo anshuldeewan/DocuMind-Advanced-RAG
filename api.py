@@ -1,19 +1,21 @@
 import os
+import time
+import tempfile
+import traceback
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
-
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import tempfile
-import time
-# Local imports
-from document_loader import MultiModalDocumentLoader
+from typing import List, Optional
+
+load_dotenv()
+
+from multimodal_loader import MultiModalDocumentLoader
 from document_processor import DocumentProcessor
 from rag_workflow import RAGWorkflow
-from utils import get_file_key
 
-app = FastAPI(title="DocuMind Gemini RAG API")
+app = FastAPI(title="DocuMind RAG API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,115 +25,89 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize components
-document_loader = MultiModalDocumentLoader()
-document_processor = DocumentProcessor(document_loader)
-rag_workflow = RAGWorkflow()
+# 1. Initialize Loader & Processor
+loader = MultiModalDocumentLoader()
+processor = DocumentProcessor(document_loader=loader)
+
+# 2. RAG Engine
+rag_engine = RAGWorkflow()
+
+class ChatMessagePayload(BaseModel):
+    role: str
+    content: str
 
 class QueryRequest(BaseModel):
     query: str
+    history: Optional[List[ChatMessagePayload]] = []
 
-class UploadFileMock:
-    """Mock object to simulate Streamlit's UploadedFile for document_processor compatibility"""
-    def __init__(self, name, size, type, file_obj):
-        self.name = name
-        self.size = size
-        self.type = type
-        self._file = file_obj
-        
-    def getvalue(self):
-        self._file.seek(0)
-        return self._file.read()
+class QueryResponse(BaseModel):
+    answer: str
+    latency: float
+    sources: List[str]
+    faithfulness_score: float
+    route: str
 
-@app.get("/api/health")
-async def health_check():
-    return {"status": "active", "engine": "DocuMind Gemini RAG"}
+@app.get("/")
+def read_root():
+    return {"status": "online", "system": "DocuMind Advanced RAG Engine"}
 
 @app.post("/api/upload")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...)):
+    temp_path = None
     try:
-        # Read file contents
-        contents = await file.read()
-        
-        # Determine extension properly, fallback to original if split fails
-        ext = file.filename.split('.')[-1].lower() if '.' in file.filename else 'tmp'
-        
-        # Create a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as temp_file:
-            temp_file.write(contents)
-            temp_path = temp_file.name
-            
-        try:
-            # Use decoupled document processor for API
-            chunk_count = document_processor.process_file_api(temp_path, file.filename)
-            
-            # Since process_file_api doesn't return retriever directly, we recreate it here
-            # Or we can just get it since the backend uses a singleton/static Chroma instance.
-            # RAGWorkflow initializes its own retriever typically, but let's just re-initialize it.
-            # document_processor uses CHROMA_COLLECTION_NAME, CHROMA_PERSIST_DIR
-            from langchain_chroma import Chroma
-            from langchain_google_genai import GoogleGenerativeAIEmbeddings
-            from config import CHROMA_COLLECTION_NAME, CHROMA_PERSIST_DIR
-            
-            embedding_function = GoogleGenerativeAIEmbeddings(
-                model="models/gemini-embedding-001",
-                google_api_key=os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-            )
-            
-            chroma_db = Chroma(
-                collection_name=CHROMA_COLLECTION_NAME,
-                embedding_function=embedding_function,
-                persist_directory=CHROMA_PERSIST_DIR
-            )
-            retriever = chroma_db.as_retriever()
-            
-            rag_workflow.set_retriever(retriever)
-            
-            return {
-                "status": "success",
-                "filename": file.filename,
-                "chunks_created": chunk_count,
-                "message": f"Successfully parsed and indexed {chunk_count} chunks from {file.filename}"
-            }
-        except Exception as proc_error:
-            raise HTTPException(status_code=400, detail=f"Parsing error: {str(proc_error)}")
-        finally:
-            # Clean up the temp file
-            if os.path.exists(temp_path):
-                os.unlink(temp_path)
-                
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        suffix = Path(file.filename).suffix
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            contents = await file.read()
+            tmp.write(contents)
+            temp_path = tmp.name
 
-@app.post("/api/query")
-async def query_document(request: QueryRequest):
-    start_time = time.time()
-    
-    try:
-        result = rag_workflow.process_question(request.query)
-        end_time = time.time()
-        
-        latency = round(end_time - start_time, 2)
-        
-        # Format response
-        score_display = 0.95
-        if 'document_relevance_score' in result and hasattr(result['document_relevance_score'], 'confidence'):
-            score_display = float(result['document_relevance_score'].confidence)
-            
+        # Process and index file
+        chunks_count = processor.process_file_api(temp_path, file.filename)
+
         return {
-            "answer": result.get("solution", ""),
-            "latency": latency,
-            "sources": [doc.page_content for doc in result.get("documents", [])],
-            "faithfulness_score": score_display,
-            "route": result.get("search_method", "vectorstore")
+            "status": "success",
+            "filename": file.filename,
+            "chunks_count": chunks_count,
+            "message": f"Successfully parsed and indexed {chunks_count} chunks from {file.filename}."
         }
     except Exception as e:
-        import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to process file: {str(e)}")
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
+@app.post("/api/query", response_model=QueryResponse)
+async def query_endpoint(request: QueryRequest):
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+    
+    start_time = time.time()
+    try:
+        history_dicts = [msg.model_dump() for msg in (request.history or [])]
+        result = rag_engine.process_question(request.query, history=history_dicts)
+        latency = time.time() - start_time
+
+        answer = result.get("generation", "") or result.get("answer", "No answer generated.")
+        raw_docs = result.get("documents", [])
+        
+        sources = []
+        for doc in raw_docs:
+            if hasattr(doc, "page_content"):
+                sources.append(doc.page_content[:400] + "...")
+            elif isinstance(doc, str):
+                sources.append(doc[:400] + "...")
+
+        return QueryResponse(
+            answer=answer,
+            latency=round(latency, 2),
+            sources=sources,
+            faithfulness_score=float(result.get("faithfulness_score", 0.95)),
+            route=str(result.get("route", "Vector Store"))
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
