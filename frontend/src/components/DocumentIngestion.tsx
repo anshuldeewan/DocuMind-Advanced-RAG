@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion } from 'framer-motion';
-import { UploadCloud, CheckCircle, Loader2 } from 'lucide-react';
+import { UploadCloud, CheckCircle, Loader2, Info } from 'lucide-react';
 import axios from 'axios';
 
 interface DocumentIngestionProps {
@@ -94,6 +94,13 @@ export default function DocumentIngestion({ onFileIngested }: DocumentIngestionP
           </div>
         )}
       </motion.div>
+
+      <div className="mt-6 flex items-start sm:items-center justify-center gap-2.5 text-xs sm:text-sm font-medium text-slate-500 bg-white/40 py-2.5 px-5 rounded-xl border border-slate-200/60 shadow-sm max-w-lg mx-auto backdrop-blur-sm">
+        <Info size={16} className="text-blue-400 shrink-0 mt-0.5 sm:mt-0" />
+        <p className="leading-relaxed">
+          <strong>Note:</strong> The backend API is hosted on a free Render tier. It goes to sleep when inactive, so your first upload or query might take <strong>1-2 minutes</strong> to process as the server wakes up.
+        </p>
+      </div>
 
       {successMsg && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 flex items-center justify-center gap-2 text-[var(--color-accent-sage)] font-semibold">
