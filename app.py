@@ -1,6 +1,6 @@
 
 """
-Advanced RAG System with LangGraph
+DocuMind Advanced RAG System with LangGraph
 
 This is the main Streamlit application that demonstrates how to build a RAG system
 using LangGraph for workflow management. The application handles document uploads,
@@ -44,8 +44,14 @@ def handle_question_processing(question):
     
     with st.container():
         with st.spinner('🧠 Analyzing your question and retrieving relevant information...'):
+            import time
+            start_time = time.time()
             # Process the question - workflow will handle retriever automatically
             result = rag_workflow.process_question(question)
+            end_time = time.time()
+            
+            if result:
+                result['latency'] = f"{end_time - start_time:.2f}s"
         
         # Render answer section (it will handle its own heading)
         render_answer_section(result)

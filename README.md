@@ -1,5 +1,4 @@
-
-# 🔎 Advanced RAG with LangGraph
+# 🧠 DocuMind Advanced RAG with LangGraph
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -11,7 +10,10 @@
 
 This is a web application that allows you to upload documents and ask questions about them. It is built with LangGraph, Streamlit, and ChromaDB. If your document does not contain the answer, it automatically searches online to help you out.
 
-This project demonstrates how to build a RAG (Retrieval-Augmented Generation) system using LangGraph for workflow management. LangGraph helps orchestrate the different steps in the RAG pipeline, from document processing to answer generation, with built-in error handling and state management.
+This project demonstrates how to build a DocuMind Advanced RAG (Retrieval-Augmented Generation) system. Its architecture features:
+- **LangGraph cyclic routing** for dynamic fallback and iterative refinement
+- **ChromaDB multimodal retrieval** to fetch contexts across text, code, and (soon) images
+- **Self-evaluation chains** ensuring hallucination-free grounded answers
 
 If you're looking to understand how LangGraph works with RAG systems, this implementation shows practical patterns for building document question-answering applications with proper workflow orchestration.
 

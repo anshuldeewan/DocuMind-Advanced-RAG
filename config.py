@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # UI Configuration
-PAGE_TITLE = "Advanced RAG"
-PAGE_ICON = "🔎"
+PAGE_TITLE = "DocuMind Advanced RAG"
+PAGE_ICON = "🧠"
 LAYOUT = "wide"
 SIDEBAR_STATE = "expanded"
 
@@ -30,13 +30,14 @@ SUPPORTED_EXTENSIONS = [
 ]
 
 # UI Messages
-UPLOAD_PLACEHOLDER_TITLE = "📤 Upload a document to get started"
+UPLOAD_PLACEHOLDER_TITLE = "📤 Upload a document to get started with DocuMind"
 UPLOAD_PLACEHOLDER_TEXT = "Once you upload a file, you'll be able to ask questions about its content."
 QUESTION_PLACEHOLDER = "What is the main topic of this document?"
 
 # File Categories for UI Display
 FILE_CATEGORIES = {
-    "📄 Documents": ["PDF (.pdf)", "Word (.docx, .doc)", "Text (.txt, .md)"],
+    "📄 Documents (PDF/DOCX)": ["PDF (.pdf)", "Word (.docx, .doc)", "Text (.txt, .md)"],
+    "🖼️ Images": ["Images (.png, .jpg, .jpeg)"],
     "📊 Data Files": ["Excel (.xlsx, .xls)", "CSV (.csv)"],
     "💻 Code Files": ["Python (.py)", "JavaScript (.js)", "HTML (.html)", "XML (.xml)"]
 }

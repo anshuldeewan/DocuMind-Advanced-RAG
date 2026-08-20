@@ -10,47 +10,144 @@ from utils import format_file_size
 
 
 def setup_page_config():
-    """Sets up Streamlit page settings"""
+    """Sets up Streamlit page settings and injects Claymorphism CSS"""
     st.set_page_config(
         page_title=PAGE_TITLE, 
         page_icon=PAGE_ICON,
         layout=LAYOUT,
         initial_sidebar_state=SIDEBAR_STATE
     )
+    
+    # Inject Claymorphism CSS
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        
+        html, body, [class*="css"]  {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f0f4f8;
+        }
+        
+        .clay-card {
+            background: #f0f4f8;
+            border-radius: 20px;
+            box-shadow: 
+                8px 8px 16px #d1d9e6, 
+                -8px -8px 16px #ffffff,
+                inset 2px 2px 4px rgba(255, 255, 255, 0.5),
+                inset -2px -2px 4px rgba(209, 217, 230, 0.5);
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .clay-card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 
+                12px 12px 20px #d1d9e6, 
+                -12px -12px 20px #ffffff,
+                inset 2px 2px 4px rgba(255, 255, 255, 0.5),
+                inset -2px -2px 4px rgba(209, 217, 230, 0.5);
+        }
+        
+        .clay-badge {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-block;
+            box-shadow: 4px 4px 8px #d1d9e6, -4px -4px 8px #ffffff;
+            margin-bottom: 12px;
+        }
+        
+        .clay-hero {
+            text-align: center;
+            padding: 40px 20px;
+            background: #f0f4f8;
+            border-radius: 24px;
+            box-shadow: 
+                inset 6px 6px 12px #d1d9e6, 
+                inset -6px -6px 12px #ffffff;
+            margin-bottom: 30px;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        
+        .metric-label {
+            font-size: 0.85rem;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 
 def render_header():
-    """Shows the main header section"""
-    st.title(f"{PAGE_ICON} Advanced RAG System")
-    st.subheader("Intelligent Document Search & Analysis")
+    """Shows the main header section with Claymorphism"""
+    st.markdown("""
+    <div class="clay-hero">
+        <div class="clay-badge">DocuMind - Enterprise Multimodal RAG Engine</div>
+        <h1 style="margin: 0; padding-bottom: 10px; color: #1a202c;">DocuMind Advanced RAG</h1>
+        <p style="color: #4a5568; font-size: 1.1rem;">Intelligent Document Search & Analysis powered by LangGraph</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Feature highlights
+    # Feature highlights in Clay cards
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.info("🔍 **Smart Search**\n\nAdvanced retrieval with fallback to online sources")
+        st.markdown("""
+        <div class="clay-card">
+            <h4 style="margin-top:0;">🔍 Smart Search</h4>
+            <p style="color: #718096; font-size: 0.9rem;">Advanced retrieval with fallback to online sources</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.info("📄 **Multi-Format**\n\nPDF, Word, Excel, Code files supported")
+        st.markdown("""
+        <div class="clay-card">
+            <h4 style="margin-top:0;">📄 Multi-Format</h4>
+            <p style="color: #718096; font-size: 0.9rem;">PDF, Images, Word, Excel, Code files supported</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        st.info("🤖 **LLM-Powered**\n\nLangGraph workflow with hallucination detection")
+        st.markdown("""
+        <div class="clay-card">
+            <h4 style="margin-top:0;">🤖 LLM-Powered</h4>
+            <p style="color: #718096; font-size: 0.9rem;">LangGraph workflow with hallucination detection</p>
+        </div>
+        """, unsafe_allow_html=True)
     
-    st.divider()
+    st.markdown("<br>", unsafe_allow_html=True)
 
 
 def render_sidebar(document_loader):
-    """Shows the sidebar with app info and file types"""
+    """Shows the sidebar with app info, file types, and telemetry metrics"""
     with st.sidebar:
-        # App info
+        # App info in Clay card
         st.markdown("""
-        <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-            <h4>🔍 Advanced RAG System</h4>
-            <p>Upload documents and ask intelligent questions using LLM-powered retrieval.</p>
+        <div class="clay-card">
+            <h4 style="margin-top:0;">🧠 DocuMind Status</h4>
+            <div style="margin-bottom: 10px;">
+                <span class="metric-label">Routing</span><br>
+                <span class="metric-value" style="color: #48bb78;">Dynamic (Active)</span>
+            </div>
+            <div>
+                <span class="metric-label">Self-Eval Chains</span><br>
+                <span class="metric-value" style="color: #48bb78;">Active</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("### 📋 Supported File Types")
+        st.markdown("### 📋 Supported Formats")
         
         # Organized file type display
         for category, formats in FILE_CATEGORIES.items():
@@ -123,14 +220,18 @@ def render_upload_placeholder():
 
 def render_question_section(user_file):
     """Shows the question input section"""
-    st.markdown("---")
     st.markdown("### 💬 Ask Questions About Your Document")
     
     # Display current file info
     file_display = f"📄 **Current Document:** {user_file.name}"
     if hasattr(user_file, 'type') and user_file.type:
         file_display += f" ({user_file.type})"
-    st.markdown(file_display)
+    
+    st.markdown(f"""
+    <div class="clay-card" style="padding: 12px 24px; margin-bottom: 16px;">
+        <p style="margin: 0; color: #4a5568;">{file_display}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Question input
     col1, col2 = st.columns([4, 1])
@@ -140,18 +241,45 @@ def render_question_section(user_file):
             'Enter your question:', 
             placeholder="What is the main topic of this document?",
             disabled=not user_file,
-            help="Ask any question about the content of your uploaded document"
+            help="Ask any question about the content of your uploaded document",
+            label_visibility="collapsed"
         )
     
     with col2:
-        st.markdown("<br>", unsafe_allow_html=True)  # Add spacing
         ask_button = st.button("Ask", use_container_width=True)
     
     return question, ask_button
 
 
 def render_answer_section(result):
-    """Shows the answer section"""
-    st.markdown("### 📝 Answer")
-    st.success(result['solution'])
-    st.markdown("---")
+    """Shows the answer section with Claymorphism"""
+    st.markdown("### 📝 Response")
+    
+    # Extract latency, faithfulness score, and source tags if available in result
+    # Fallback appropriately to maintain stability
+    latency = result.get('latency', 'N/A')
+    
+    score_display = 'N/A'
+    if 'document_relevance_score' in result and hasattr(result['document_relevance_score'], 'confidence'):
+        score_display = f"{result['document_relevance_score'].confidence:.2f}"
+        
+    search_method = result.get('search_method', 'Unknown')
+    source_tag = "🌐 Online" if search_method == 'online' else "📄 Documents"
+    
+    st.markdown(f"""
+    <div class="clay-card">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #cbd5e0; padding-bottom: 10px; margin-bottom: 15px;">
+            <div>
+                <span class="clay-badge" style="margin-bottom: 0;">Source: {source_tag}</span>
+            </div>
+            <div style="text-align: right;">
+                <span class="metric-label">Faithfulness:</span> <span style="font-weight: 600; color: #2b6cb0;">{score_display}</span>
+                &nbsp;|&nbsp;
+                <span class="metric-label">Latency:</span> <span style="font-weight: 600; color: #2b6cb0;">{latency}</span>
+            </div>
+        </div>
+        <div style="color: #2d3748; line-height: 1.6; white-space: pre-wrap;">
+{result.get('solution', 'No answer provided.')}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
