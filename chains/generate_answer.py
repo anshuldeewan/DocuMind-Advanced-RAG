@@ -1,12 +1,17 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-llm = ChatOpenAI(temperature=0)
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash",
+    google_api_key=os.getenv("GEMINI_API_KEY"),
+    temperature=0
+)
 
 # Custom RAG prompt for better answer generation
 system_prompt = """You are an expert assistant specializing in answering questions based on provided documents. Your goal is to provide accurate, helpful, and well-structured answers that directly address the user's question.

@@ -5,7 +5,8 @@ import streamlit as st
 import time
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+import os
 
 from config import CHUNK_SIZE, CHUNK_OVERLAP, CHROMA_COLLECTION_NAME, CHROMA_PERSIST_DIR
 from utils import get_file_key
@@ -17,7 +18,10 @@ class DocumentProcessor:
     
     def __init__(self, document_loader):
         self.document_loader = document_loader
-        self.embedding_function = OpenAIEmbeddings()
+        self.embedding_function = GoogleGenerativeAIEmbeddings(
+            model="models/text-embedding-004",
+            google_api_key=os.getenv("GEMINI_API_KEY")
+        )
     
     def process_file(self, user_file):
         """

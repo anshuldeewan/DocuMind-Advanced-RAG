@@ -52,7 +52,7 @@ langchain==0.3.13
 langchain-chroma==0.1.4
 langchain-community==0.3.13
 langchain-core==0.3.28
-langchain-openai==0.2.14
+langchain-google-genai==2.0.8
 langchain-text-splitters==0.3.4
 langchainhub==0.1.21
 langgraph==0.2.60
@@ -73,7 +73,6 @@ narwhals==1.20.1
 numpy==1.26.4
 oauthlib==3.2.2
 onnxruntime==1.20.1
-openai==1.58.1
 opentelemetry-api==1.29.0
 opentelemetry-exporter-otlp-proto-common==1.29.0
 opentelemetry-exporter-otlp-proto-grpc==1.29.0
@@ -135,6 +134,7 @@ typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.3.0
 uvicorn==0.34.0
+python-multipart==0.0.20
 # uvloop==0.21.0
 watchfiles==1.0.3
 websocket-client==1.8.0

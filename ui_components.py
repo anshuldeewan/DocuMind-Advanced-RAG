@@ -23,67 +23,95 @@ def setup_page_config():
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
         
-        html, body, [class*="css"]  {
+        html, body, [class*="css"], .stApp {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #f0f4f8;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        
+        h1, h2, h3, h4, h5, h6, .stMarkdown p strong {
+            color: #f8fafc !important;
+        }
+        
+        p, .stMarkdown p {
+            color: #94a3b8;
         }
         
         .clay-card {
-            background: #f0f4f8;
+            background: #1e293b;
             border-radius: 20px;
             box-shadow: 
-                8px 8px 16px #d1d9e6, 
-                -8px -8px 16px #ffffff,
-                inset 2px 2px 4px rgba(255, 255, 255, 0.5),
-                inset -2px -2px 4px rgba(209, 217, 230, 0.5);
+                6px 6px 14px #0b1120, 
+                -6px -6px 14px #27354a, 
+                inset 1px 1px 2px rgba(255, 255, 255, 0.1), 
+                inset -1px -1px 2px rgba(0, 0, 0, 0.4);
             padding: 24px;
             margin-bottom: 24px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            color: #f8fafc;
         }
         
         .clay-card:hover {
-            transform: translateY(-4px) scale(1.01);
+            transform: translateY(-3px) scale(1.01);
             box-shadow: 
-                12px 12px 20px #d1d9e6, 
-                -12px -12px 20px #ffffff,
-                inset 2px 2px 4px rgba(255, 255, 255, 0.5),
-                inset -2px -2px 4px rgba(209, 217, 230, 0.5);
+                8px 8px 18px #0b1120, 
+                -8px -8px 18px #27354a,
+                inset 1px 1px 2px rgba(255, 255, 255, 0.1),
+                inset -1px -1px 2px rgba(0, 0, 0, 0.4);
         }
         
         .clay-badge {
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            background: linear-gradient(135deg, #6366f1, #38bdf8);
             color: white;
             padding: 6px 12px;
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
             display: inline-block;
-            box-shadow: 4px 4px 8px #d1d9e6, -4px -4px 8px #ffffff;
+            box-shadow: 4px 4px 8px #0b1120, -4px -4px 8px #27354a;
             margin-bottom: 12px;
         }
         
         .clay-hero {
             text-align: center;
             padding: 40px 20px;
-            background: #f0f4f8;
+            background: #1e293b;
             border-radius: 24px;
             box-shadow: 
-                inset 6px 6px 12px #d1d9e6, 
-                inset -6px -6px 12px #ffffff;
+                inset 6px 6px 12px #0b1120, 
+                inset -6px -6px 12px #27354a;
             margin-bottom: 30px;
         }
         
         .metric-value {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #2d3748;
+            color: #f8fafc;
         }
         
         .metric-label {
             font-size: 0.85rem;
-            color: #718096;
+            color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }
+
+        /* Streamlit Native Elements Customization */
+        .stFileUploader, [data-testid="stSidebar"], div[data-baseweb="input"], [data-testid="stExpander"] {
+            background-color: #1e293b !important;
+            border-radius: 16px !important;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3), inset -2px -2px 5px rgba(255,255,255,0.05) !important;
+            border: none !important;
+        }
+
+        /* Override sidebar background specifically */
+        [data-testid="stSidebar"] > div:first-child {
+            background-color: #0f172a !important;
+        }
+        
+        /* Fix input text color */
+        div[data-baseweb="input"] input {
+            color: #f8fafc !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -94,8 +122,8 @@ def render_header():
     st.markdown("""
     <div class="clay-hero">
         <div class="clay-badge">DocuMind - Enterprise Multimodal RAG Engine</div>
-        <h1 style="margin: 0; padding-bottom: 10px; color: #1a202c;">DocuMind Advanced RAG</h1>
-        <p style="color: #4a5568; font-size: 1.1rem;">Intelligent Document Search & Analysis powered by LangGraph</p>
+        <h1 style="margin: 0; padding-bottom: 10px; color: #f8fafc;">DocuMind Advanced RAG</h1>
+        <p style="color: #94a3b8; font-size: 1.1rem;">Intelligent Document Search & Analysis powered by LangGraph</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -105,24 +133,24 @@ def render_header():
     with col1:
         st.markdown("""
         <div class="clay-card">
-            <h4 style="margin-top:0;">🔍 Smart Search</h4>
-            <p style="color: #718096; font-size: 0.9rem;">Advanced retrieval with fallback to online sources</p>
+            <h4 style="margin-top:0; color: #f8fafc;">🔍 Smart Search</h4>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Advanced retrieval with fallback to online sources</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
         <div class="clay-card">
-            <h4 style="margin-top:0;">📄 Multi-Format</h4>
-            <p style="color: #718096; font-size: 0.9rem;">PDF, Images, Word, Excel, Code files supported</p>
+            <h4 style="margin-top:0; color: #f8fafc;">📄 Multi-Format</h4>
+            <p style="color: #94a3b8; font-size: 0.9rem;">PDF, Images, Word, Excel, Code files supported</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
         st.markdown("""
         <div class="clay-card">
-            <h4 style="margin-top:0;">🤖 LLM-Powered</h4>
-            <p style="color: #718096; font-size: 0.9rem;">LangGraph workflow with hallucination detection</p>
+            <h4 style="margin-top:0; color: #f8fafc;">🤖 LLM-Powered</h4>
+            <p style="color: #94a3b8; font-size: 0.9rem;">LangGraph workflow with hallucination detection</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -135,14 +163,14 @@ def render_sidebar(document_loader):
         # App info in Clay card
         st.markdown("""
         <div class="clay-card">
-            <h4 style="margin-top:0;">🧠 DocuMind Status</h4>
+            <h4 style="margin-top:0; color: #f8fafc;">🧠 DocuMind Status</h4>
             <div style="margin-bottom: 10px;">
                 <span class="metric-label">Routing</span><br>
-                <span class="metric-value" style="color: #48bb78;">Dynamic (Active)</span>
+                <span class="metric-value" style="color: #38bdf8;">Dynamic (Active)</span>
             </div>
             <div>
                 <span class="metric-label">Self-Eval Chains</span><br>
-                <span class="metric-value" style="color: #48bb78;">Active</span>
+                <span class="metric-value" style="color: #38bdf8;">Active</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -211,9 +239,9 @@ def render_file_analysis(file_info):
 def render_upload_placeholder():
     """Shows placeholder when no file is uploaded"""
     st.markdown(f"""
-    <div style="text-align: center; padding: 3rem; background: #f8fafc; border-radius: 10px; margin: 2rem 0;">
-        <h3>{UPLOAD_PLACEHOLDER_TITLE}</h3>
-        <p>{UPLOAD_PLACEHOLDER_TEXT}</p>
+    <div style="text-align: center; padding: 3rem; background: #1e293b; border-radius: 16px; margin: 2rem 0; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.3), inset -2px -2px 5px rgba(255,255,255,0.05);">
+        <h3 style="color: #f8fafc;">{UPLOAD_PLACEHOLDER_TITLE}</h3>
+        <p style="color: #94a3b8;">{UPLOAD_PLACEHOLDER_TEXT}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -229,7 +257,7 @@ def render_question_section(user_file):
     
     st.markdown(f"""
     <div class="clay-card" style="padding: 12px 24px; margin-bottom: 16px;">
-        <p style="margin: 0; color: #4a5568;">{file_display}</p>
+        <p style="margin: 0; color: #94a3b8;">{file_display}</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -268,17 +296,17 @@ def render_answer_section(result):
     
     st.markdown(f"""
     <div class="clay-card">
-        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #cbd5e0; padding-bottom: 10px; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #334155; padding-bottom: 10px; margin-bottom: 15px;">
             <div>
                 <span class="clay-badge" style="margin-bottom: 0;">Source: {source_tag}</span>
             </div>
             <div style="text-align: right;">
-                <span class="metric-label">Faithfulness:</span> <span style="font-weight: 600; color: #2b6cb0;">{score_display}</span>
+                <span class="metric-label">Faithfulness:</span> <span style="font-weight: 600; color: #38bdf8;">{score_display}</span>
                 &nbsp;|&nbsp;
-                <span class="metric-label">Latency:</span> <span style="font-weight: 600; color: #2b6cb0;">{latency}</span>
+                <span class="metric-label">Latency:</span> <span style="font-weight: 600; color: #38bdf8;">{latency}</span>
             </div>
         </div>
-        <div style="color: #2d3748; line-height: 1.6; white-space: pre-wrap;">
+        <div style="color: #f8fafc; line-height: 1.6; white-space: pre-wrap;">
 {result.get('solution', 'No answer provided.')}
         </div>
     </div>

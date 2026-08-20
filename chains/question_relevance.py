@@ -1,7 +1,8 @@
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 from langchain_core.runnables import RunnableSequence
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
 
 from dotenv import load_dotenv
 
@@ -37,7 +38,11 @@ class QuestionRelevance(BaseModel):
     )
 
 
-llm = ChatOpenAI(temperature=0)
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash",
+    google_api_key=os.getenv("GEMINI_API_KEY"),
+    temperature=0
+)
 structured_output = llm.with_structured_output(QuestionRelevance)
 
 system = """You are an expert question-answer relevance evaluator for a conversational AI system. Your role is to assess whether a generated answer properly addresses and resolves the user's question.

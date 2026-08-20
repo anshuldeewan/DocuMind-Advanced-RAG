@@ -14,13 +14,18 @@ to proceed with document-based answers or fall back to online search.
 """
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-llm = ChatOpenAI(temperature=0)
+llm = ChatGoogleGenerativeAI(
+    model="gemini-1.5-flash",
+    google_api_key=os.getenv("GEMINI_API_KEY"),
+    temperature=0
+)
 
 class EvaluateDocs(BaseModel):
     """
